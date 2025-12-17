@@ -1,0 +1,23 @@
+diff --git a/imap/monitor.go b/imap/monitor.go
+index b05dd9d..16fd353 100644
+--- a/imap/monitor.go
++++ b/imap/monitor.go
+@@ -24,7 +24,7 @@ import (
+ // Pattern for GoPhish emails e.g ?rid=AbC1234
+ // We include the optional quoted-printable 3D at the front, just in case decoding fails. e.g ?rid=3DAbC1234
+ // We also include alternative URL encoded representations of '=' and '?' to handle Microsoft ATP URLs e.g %3Frid%3DAbC1234
+-var goPhishRegex = regexp.MustCompile("((\\?|%3F)rid(=|%3D)(3D)?([A-Za-z0-9]{7}))")
++var goPhishRegex = regexp.MustCompile("((\\?|%3F)(rid|keyname)(=|%3D)(3D)?([A-Za-z0-9]{7}))")
+ 
+ // Monitor is a worker that monitors IMAP servers for reported campaign emails
+ type Monitor struct {
+@@ -205,6 +205,9 @@ func checkForNewEmails(im models.IMAP) {
+ func checkRIDs(em *email.Email, rids map[string]bool) {
+ 	// Check Text and HTML
+ 	emailContent := string(em.Text) + string(em.HTML)
++	emailContent = strings.ReplaceAll(emailContent, "keyname=", "rid=")
++	emailContent = strings.ReplaceAll(emailContent, "keyname%3D", "rid%3D")
++	log.Debug("EmailContent after replacing keyname: ", emailContent)
+ 	for _, r := range goPhishRegex.FindAllStringSubmatch(emailContent, -1) {
+ 		newrid := r[len(r)-1]
+ 		if !rids[newrid] {

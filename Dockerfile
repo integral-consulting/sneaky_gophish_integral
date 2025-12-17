@@ -3,7 +3,7 @@ FROM node:latest AS build-js
 
 RUN npm install gulp gulp-cli -g
 
-RUN apt update && apt install git
+RUN apt update && apt install -y git
 WORKDIR /build
 RUN git clone https://github.com/gophish/gophish .
 RUN npm install --only=dev
@@ -11,7 +11,9 @@ RUN gulp
 
 
 # Build Golang binary
-FROM golang:1.15.2 AS build-golang
+FROM golang:1.25.5 AS build-golang
+
+RUN apt-get update && apt-get install -y patch && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /go/src/github.com/gophish/gophish
 COPY --from=build-js /build/ ./
@@ -30,6 +32,9 @@ RUN sed -i 's/const ServerName = "gophish"/const ServerName = "IGNORE"/' config/
 
 # Changing rid value
 RUN sed -i 's/const RecipientParameter = "rid"/const RecipientParameter = "keyname"/g' models/campaign.go
+
+COPY ./files/monitor.patch ./monitor.patch
+RUN patch imap/monitor.go monitor.patch
 
 # Copying in custom 404 handler
 COPY ./files/phish.go ./controllers/phish.go
